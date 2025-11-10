@@ -1,5 +1,7 @@
 package com.example.dizimowg.core.network
 
+import com.example.dizimowg.features.card.PaymentRequest
+import com.example.dizimowg.features.card.PaymentResponse
 import com.example.dizimowg.features.card.SaveCardRequest
 import com.example.dizimowg.features.card.SavedCard
 import com.example.dizimowg.features.history.HistoryResponse
@@ -45,6 +47,9 @@ interface ApiService {
     // Rota para buscar os cartões do usuário
     @GET("mercadopago/my-cards")
     suspend fun getMyCards(): List<SavedCard>
+
+    @POST("mercadopago/create-payment")
+    suspend fun createCardPayment(@Body request: PaymentRequest): PaymentResponse
 }
 
 // --- Objeto ApiClient ---

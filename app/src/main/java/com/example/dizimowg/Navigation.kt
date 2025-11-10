@@ -9,4 +9,8 @@ sealed class Screen(val route: String) {
     }
     object History : Screen( "history_screen")
     object AdicionarCartao : Screen("adicionar_cartao_screen")
+    object MeusCartoes : Screen("meus_cartoes_screen/{amountInCents}") {
+        fun createRoute(amountInCents: Int) = "meus_cartoes_screen/$amountInCents"
+    }
+    object PagamentoSucesso : Screen("pagamento_sucesso_screen")
 }

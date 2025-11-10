@@ -3,7 +3,7 @@ package com.example.dizimowg.features.historico.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dizimowg.core.network.ApiClient
-import com.example.dizimowg.core.network.Lancamento
+import com.example.dizimowg.features.history.Lancamento
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -11,7 +11,6 @@ import kotlinx.coroutines.launch
 
 // Define a "forma" do nosso estado da UI
 data class HistoryUiState(
-    // A lista agora é um mapa, onde a chave é o Ano (String) e o valor é a lista de lançamentos daquele ano
     val groupedLancamentos: Map<String, List<Lancamento>> = emptyMap(),
     val totalSum: Double = 0.0,
     val isLoading: Boolean = true,

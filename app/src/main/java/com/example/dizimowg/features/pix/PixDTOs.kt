@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 // Data classes movidas para cá
 data class CreatePixRequest(val userId: Int, val amount: Int)
 data class CreatePixResponse(
-    @SerializedName("paymentId") val paymentId: Long,
+    @SerializedName("paymentId") val paymentId: String,
     @SerializedName("status") val status: String,
     @SerializedName("qrCodeBase64") val qrCodeBase64: String,
     @SerializedName("copiaECola") val copiaECola: String

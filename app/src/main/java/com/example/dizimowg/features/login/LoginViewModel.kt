@@ -3,8 +3,6 @@ package com.example.dizimowg.features.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dizimowg.core.network.ApiClient
-import com.example.dizimowg.core.network.LoginRequest
-import com.example.dizimowg.core.network.User
 import com.example.dizimowg.core.util.SessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

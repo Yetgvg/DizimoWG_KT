@@ -53,7 +53,7 @@ class CurrencyAmountInputVisualTransformation : VisualTransformation {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DoacaoScreen(onNavigateBack: () -> Unit, onNavigateToPix: (Int) -> Unit, onNavigateToCartao: () -> Unit) {
+fun DoacaoScreen(onNavigateBack: () -> Unit, onNavigateToPix: (Int) -> Unit, onNavigateToCartao: (Int) -> Unit) {
     // O estado agora guarda os centavos como uma string de dígitos
     var amountInCents by remember { mutableStateOf("") }
     val presetAmounts = listOf(1000, 2000, 5000, 10000) // Valores em centavos
@@ -130,7 +130,7 @@ fun DoacaoScreen(onNavigateBack: () -> Unit, onNavigateToPix: (Int) -> Unit, onN
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedButton(
-                onClick = onNavigateToCartao,
+                onClick = { onNavigateToCartao(amountAsCentsInt) },
                 enabled = amountAsCentsInt > 0,
                 modifier = Modifier.fillMaxWidth().height(60.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = primaryRed),

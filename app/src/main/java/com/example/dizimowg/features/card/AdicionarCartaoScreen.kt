@@ -13,7 +13,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,130 +28,206 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun AdicionarCartaoScreen(
     onNavigateBack: () -> Unit,
-    viewModel: AdicionarCartaoViewModel = viewModel()
+    viewModel: AdicionarCartaoViewModel = viewModel() // Use a ViewModel SIMPLES
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    lateinit var webViewInstance: WebView
+    val webView = remember { mutableStateOf<WebView?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // --- HTML COM A ORDEM CORRETA DOS SCRIPTS ---
+    // --- HTML V2 (CORRIGIDO PARA GERAR UM TOKEN 'LIMPO') ---
     val htmlContent = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 16px; background-color: #f5f5f5; }
-                div { margin-bottom: 12px; }
-                input, select {
-                    width: 100%;
-                    padding: 14px;
-                    border: 1px solid #ccc;
-                    border-radius: 4px;
-                    box-sizing: border-box;
-                    font-size: 16px;
-                }
-                label { display: block; margin-bottom: 4px; font-weight: 500; color: #333; }
-            </style>
-            
-            <script>
-                function initMercadoPago() {
-                    try {
-                        const mp = new MercadoPago('APP_USR-8b97608b-5799-4f72-a0d9-22cf24caa933', {
-                            locale: 'pt-BR'
-                        });
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        :root {
+          --primary-red: #E53935;
+          --light-gray: #BDBDBD;
+          --dark-text: #333;
+        }
+    
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          margin: 0;
+          padding: 16px;
+          background-color: #f7f8fc;
+        }
+    
+        .field-container {
+          margin-bottom: 16px;
+        }
+    
+        label {
+          display: block;
+          margin-bottom: 6px;
+          font-weight: 500;
+          font-size: 14px;
+          color: var(--dark-text);
+        }
+    
+        input, select {
+          width: 100%;
+          padding: 14px;
+          font-size: 16px;
+          color: var(--dark-text);
+          background-color: #fff;
+          border: 1px solid var(--light-gray);
+          border-radius: 8px;
+          box-sizing: border-box;
+          transition: border-color 0.2s ease-in-out;
+        }
+    
+        input:focus, select:focus {
+          border-color: var(--primary-red);
+          outline: none;
+        }
+    
+        button {
+          width: 100%;
+          background-color: var(--primary-red);
+          color: #fff;
+          padding: 16px;
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: background-color 0.2s ease-in-out;
+        }
+    
+        button:hover {
+          background-color: #c62828;
+        }
+      </style>
+    
+      <script src="https://sdk.mercadopago.com/js/v2"></script>
+    
+      <script>
+        const mp = new MercadoPago('APP_USR-21e84916-3118-4cc9-bf93-c4b20fea905f', { locale: 'pt-BR' });
+    
+        window.onload = function() {
+          const cardForm = mp.cardForm({
+            amount: "1.00",
+            autoMount: true,
+            form: {
+              id: "form-checkout",
+              cardholderName: {
+                id: "form-checkout__cardholderName",
+                placeholder: "Nome no cartão",
+              },
+              cardNumber: {
+                id: "form-checkout__cardNumber",
+                placeholder: "Número do cartão",
+              },
+              expirationDate: {
+                id: "form-checkout__expirationDate",
+                placeholder: "MM/AA",
+              },
+              securityCode: {
+                id: "form-checkout__securityCode",
+                placeholder: "CVC",
+              },
+              identificationType: {
+                id: "form-checkout__identificationType",
+              },
+              identificationNumber: {
+                id: "form-checkout__identificationNumber",
+                placeholder: "Documento",
+              },
+              issuer: { id: "form-checkout__issuer" },
+              installments: { id: "form-checkout__installments" },
+            },
+            callbacks: {
+              onFormMounted: error => {
+                if (error) return KotlinApp.onErrorReceived("Erro ao montar formulário: " + JSON.stringify(error));
+              },
+              onSubmit: event => {
+                event.preventDefault();
+                const {
+                  token,
+                } = cardForm.getCardFormData();
+    
+                  if (!token) {
+                    return KotlinApp.onErrorReceived("Erro: token não gerado.");
+                  }
 
-                        (async function getIdentificationTypes() {
-                            try {
-                                const identificationTypes = await mp.getIdentificationTypes();
-                                const elem = document.getElementById('form-checkout__identificationType');
-                                identificationTypes.forEach(option => {
-                                    const opt = document.createElement('option');
-                                    opt.value = option.id;
-                                    opt.textContent = option.name;
-                                    elem.appendChild(opt);
-                                });
-                            } catch (e) {
-                                console.error('Erro ao buscar tipos de doc:', e);
-                            }
-                        })();
-
-                        window.submitForm = async () => {
-                            try {
-                                const cardForm = document.getElementById('form-checkout');
-                                const token = await mp.createCardToken(cardForm); 
-                                KotlinApp.onTokenReceived(token.id);
-                            } catch (e) {
-                                console.error('Erro ao criar token:', e.message || JSON.stringify(e));
-                                const errorMsg = (Array.isArray(e) && e.length > 0) ? e[0].message : 'Erro ao criar token';
-                                KotlinApp.onErrorReceived(errorMsg);
-                            }
-                        };
-                        
-                        console.log("Formulário simples (sem iframe) montado com sucesso!");
-
-                    } catch (e) {
-                        console.error('Erro fatal na inicialização:', e.message || JSON.stringify(e));
-                        KotlinApp.onErrorReceived(e.message || 'Erro fatal no MP');
-                    }
-                }
-            </script>
-            
-            <script src="https://sdk.mercadopago.com/js/v2" onload="initMercadoPago()"></script>
-        </head>
-        <body style="margin: 0; padding: 16px;">
-            
-            <form id="form-checkout">
-                <div>
-                    <label for="form-checkout__cardNumber">Número do Cartão</label>
-                    <input id="form-checkout__cardNumber" type="text" />
-                </div>
-                <div>
-                    <label for="form-checkout__cardExpirationMonth">Mês (MM)</label>
-                    <input id="form-checkout__cardExpirationMonth" type="text" />
-                </div>
-                <div>
-                    <label for="form-checkout__cardExpirationYear">Ano (AAAA)</label>
-                    <input id="form-checkout__cardExpirationYear" type="text" />
-                </div>
-                <div>
-                    <label for="form-checkout__cardholderName">Nome no Cartão</label>
-                    <input id="form-checkout__cardholderName" type="text" />
-                </div>
-                <div>
-                    <label for="form-checkout__cardholderEmail">E-mail</label>
-                    <input id="form-checkout__cardholderEmail" type="email" />
-                </div>
-                <div>
-                    <label for="form-checkout__securityCode">CVC</label>
-                    <input id="form-checkout__securityCode" type="text" />
-                </div>
-                <div>
-                    <label for="form-checkout__identificationType">Tipo de Documento</label>
-                    <select id="form-checkout__identificationType"></select>
-                </div>
-                <div>
-                    <label for="form-checkout__identificationNumber">Número do Documento</label>
-                    <input id="form-checkout__identificationNumber" type="text" />
-                </div>
-            </form>
-
-        </body>
-        </html>
+                KotlinApp.onTokenReceived(JSON.stringify({ token }));
+              },
+              onError: error => {
+                KotlinApp.onErrorReceived("Erro: " + JSON.stringify(error));
+              }
+            },
+          });
+        }
+      </script>
+    </head>
+    
+    <body>
+      <form id="form-checkout">
+        <div class="field-container">
+          <label for="form-checkout__cardholderName">Nome no Cartão</label>
+          <input type="text" id="form-checkout__cardholderName" />
+        </div>
+    
+        <div class="field-container">
+          <label for="form-checkout__cardNumber">Número do Cartão</label>
+          <input type="text" id="form-checkout__cardNumber" />
+        </div>
+    
+        <div class="field-container">
+          <label for="form-checkout__expirationDate">Validade (MM/AA)</label>
+          <input type="text" id="form-checkout__expirationDate" />
+        </div>
+    
+        <div class="field-container">
+          <label for="form-checkout__securityCode">CVC</label>
+          <input type="text" id="form-checkout__securityCode" />
+        </div>
+    
+        <div class="field-container">
+          <label for="form-checkout__identificationType">Tipo de Documento</label>
+          <select id="form-checkout__identificationType"></select>
+        </div>
+    
+        <div class="field-container">
+          <label for="form-checkout__identificationNumber">Número do Documento</label>
+          <input type="text" id="form-checkout__identificationNumber" />
+        </div>
+        
+        <div class="hidden-field" style="display:none">
+          <select id="form-checkout__issuer"></select>
+          <select id="form-checkout__installments"></select>
+        </div>
+        
+      </form>
+    </body>
+    </html>
     """.trimIndent()
 
-    /**
-     * A "Ponte" de comunicação.
-     */
     class JavaScriptBridge(val viewModel: AdicionarCartaoViewModel) {
         @JavascriptInterface
-        fun onTokenReceived(token: String) {
-            println("Token recebido do WebView: $token")
-            viewModel.sendTokenToBackend(token)
+        fun onTokenReceived(jsonData: String) {
+            println("Token recebido do WebView: $jsonData")
+            viewModel.sendTokenToBackend(jsonData)
         }
         @JavascriptInterface
         fun onErrorReceived(message: String) {
             println("Erro recebido do WebView: $message")
-            // TODO: Atualizar o uiState com a mensagem de erro
+            viewModel.onError(message)
+        }
+    }
+
+    LaunchedEffect(uiState.saveSuccess) {
+        if (uiState.saveSuccess) {
+            snackbarHostState.showSnackbar(message = "Cartão salvo com sucesso!", duration = SnackbarDuration.Short)
+            onNavigateBack()
+        }
+    }
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { message ->
+            snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Long)
+            viewModel.clearError()
         }
     }
 
@@ -164,11 +242,10 @@ fun AdicionarCartaoScreen(
                 }
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             Button(
-                onClick = {
-                    webViewInstance.evaluateJavascript("window.submitForm()", null)
-                },
+                onClick = { webView.value?.evaluateJavascript("document.getElementById('form-checkout').requestSubmit()", null) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 enabled = !uiState.isLoading
             ) {
@@ -182,34 +259,30 @@ fun AdicionarCartaoScreen(
         floatingActionButtonPosition = FabPosition.Center
     ) { innerPadding ->
 
-        if (uiState.saveSuccess) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Cartão salvo com sucesso!")
-            }
-        } else {
-            AndroidView(
-                factory = { context ->
-                    WebView(context).apply {
-                        webViewClient = WebViewClient()
-                        @SuppressLint("SetJavaScriptEnabled")
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        addJavascriptInterface(JavaScriptBridge(viewModel), "KotlinApp")
-                        WebView.setWebContentsDebuggingEnabled(true)
+        AndroidView(
+            factory = { context ->
+                WebView(context).apply {
+                    webViewClient = WebViewClient()
+                    @SuppressLint("SetJavaScriptEnabled")
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    addJavascriptInterface(JavaScriptBridge(viewModel), "KotlinApp")
+                    WebView.setWebContentsDebuggingEnabled(true)
 
-                        loadDataWithBaseURL(
-                            "https://mercadopago.com",
-                            htmlContent,
-                            "text/html",
-                            "UTF-8",
-                            null
-                        )
+                    loadDataWithBaseURL(
+                        "https://mercadopago.com",
+                        htmlContent,
+                        "text/html",
+                        "UTF-8",
+                        null
+                    )
 
-                        webViewInstance = this
-                    }
-                },
-                modifier = Modifier.fillMaxSize().padding(innerPadding)
-            )
-        }
+                    webView.value = this
+                }
+            },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        )
     }
 }

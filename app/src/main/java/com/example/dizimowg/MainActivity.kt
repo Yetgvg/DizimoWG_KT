@@ -18,7 +18,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.dizimowg.core.util.getAlternativeDeviceId
 import com.example.dizimowg.features.card.AdicionarCartaoScreen
+import com.example.dizimowg.features.card.MeusCartoesScreen
+import com.example.dizimowg.features.card.MeusCartoesViewModel
+import com.example.dizimowg.features.card.PagamentoSucessoScreen
 import com.example.dizimowg.features.doacao.DoacaoScreen
 import com.example.dizimowg.features.historico.HistoryScreen
 import com.example.dizimowg.features.historico.history.HistoryViewModel
@@ -27,8 +31,8 @@ import com.example.dizimowg.features.login.LoginScreen
 import com.example.dizimowg.features.login.LoginViewModel
 import com.example.dizimowg.features.pix.PixScreen
 import com.example.dizimowg.features.pix.PixViewModel
-import com.mercadopago.sdk.android.domain.model.CountryCode
 import com.mercadopago.sdk.android.initializer.MercadoPagoSDK
+import com.mercadopago.sdk.android.domain.model.CountryCode
 
 class MainActivity : ComponentActivity() {
 
@@ -48,10 +52,8 @@ class MainActivity : ComponentActivity() {
                     val loggedInUser = loginUiState.user
                     val context = LocalContext.current
 
-                    NavHost(
-                        navController = navController,
-                        startDestination = Screen.Login.route // A primeira tela a ser exibida
-                    ) {
+                    NavHost(navController = navController, startDestination = Screen.Login.route)
+                    {
                         // --- TELA: LOGIN ---
                         composable(Screen.Login.route) {
                         val loginUiState by loginViewModel.uiState.collectAsStateWithLifecycle()
@@ -99,8 +101,8 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToPix = { amountInCents ->
                                     navController.navigate(Screen.Pix.createRoute(amountInCents))
                                 },
-                                onNavigateToCartao = {
-                                    navController.navigate(Screen.AdicionarCartao.route)
+                                onNavigateToCartao = { amountInCents ->
+                                    navController.navigate(Screen.MeusCartoes.createRoute(amountInCents))
                                 }
                             )
                         }
@@ -151,6 +153,41 @@ class MainActivity : ComponentActivity() {
                         composable(Screen.AdicionarCartao.route) {
                             AdicionarCartaoScreen(
                                 onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        // --- TELA: MEUS CARTÕES ---
+                        composable(
+                            route = Screen.MeusCartoes.route, // Rota atualizada (ex: "meus_cartoes_screen/{amountInCents}")
+                            arguments = listOf(navArgument("amountInCents") { type = NavType.IntType })
+                        ) { backStackEntry ->
+
+                            // Pega o valor da doação que veio pela rota
+                            val amountInCents = backStackEntry.arguments?.getInt("amountInCents") ?: 0
+
+                            MeusCartoesScreen(
+                                amountInCents = amountInCents, // Passa o valor para a tela
+                                onNavigateBack = { navController.popBackStack() },
+                                onNavigateToAddCard = {
+                                    navController.navigate(Screen.AdicionarCartao.route)
+                                },
+                                onPaymentSuccess = {
+                                    // Navega para a tela de sucesso e limpa a pilha de pagamento
+                                    navController.navigate(Screen.PagamentoSucesso.route) {
+                                        popUpTo(Screen.Home.route) // Volta para a Home
+                                    }
+                                }
+                            )
+                        }
+
+                        composable(Screen.PagamentoSucesso.route) {
+                            PagamentoSucessoScreen(
+                                onNavigateHome = {
+                                    // Volta para a home e limpa tudo
+                                    navController.navigate(Screen.Home.route) {
+                                        popUpTo(Screen.Home.route) { inclusive = true }
+                                    }
+                                }
                             )
                         }
                     }

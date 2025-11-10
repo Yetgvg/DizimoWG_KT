@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Gerar Token - Cartão Salvo</title>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <style>
+        body { background: #fff; }
+        #hidden-fields {
+          position: absolute;
+          top: -9999px;
+          left: -9999px;
+          width: 0;
+          height: 0;
+          overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+<div id="hidden-fields">
+    <div id="cardNumber"></div>
+    <div id="securityCode"></div>
+</div>
+
+<script>
+    const mp = new MercadoPago('APP_USR-21e84916-3118-4cc9-bf93-c4b20fea905f', { locale: 'pt-BR' });
+
+    // Cria os campos “fakes” invisíveis pra satisfazer o SDK
+    const cardNumberField = mp.fields.create('cardNumber', { placeholder: '' });
+    cardNumberField.mount('cardNumber');
+
+    const securityCodeField = mp.fields.create('securityCode', { placeholder: '' });
+    securityCodeField.mount('securityCode');
+
+    async function generateToken(cardId, cvv) {
+      try {
+        if (!cardId || !cvv) {
+          Android.onToken(JSON.stringify({ ok: false, error: 'Parâmetros inválidos.' }));
+          return;
+        }
+
+        console.log('🪄 Gerando token para cartão salvo:', cardId);
+
+        // Aguarda um pouquinho pra garantir que os fields foram montados
+        await new Promise((r) => setTimeout(r, 500));
+
+        // Gera o token para o cartão salvo
+        const token = await mp.fields.createCardToken({
+          cardId: cardId,
+          securityCode: cvv
+        });
+
+        console.log('✅ Token gerado com sucesso:', token.id);
+        Android.onToken(JSON.stringify({ ok: true, token: token.id }));
+      } catch (error) {
+        console.error('❌ Erro ao gerar token:', error);
+        const message = Array.isArray(error)
+          ? error.map(e => `${e.field}: ${e.message}`).join(' | ')
+          : (error.message || 'Erro desconhecido');
+        Android.onToken(JSON.stringify({ ok: false, error: message }));
+      }
+    }
+
+    // Expõe pro Kotlin
+    window.generateToken = generateToken;
+</script>
+</body>
+</html>

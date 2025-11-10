@@ -3,7 +3,6 @@ package com.example.dizimowg.features.pix
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.dizimowg.core.network.ApiClient
-import com.example.dizimowg.core.network.CreatePixRequest
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

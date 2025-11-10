@@ -2,7 +2,6 @@ package com.example.dizimowg.features.history
 
 import com.google.gson.annotations.SerializedName
 
-// Data classes movidas para cá
 data class Lancamento(
     val codigo: Int,
     val data: String,
@@ -12,6 +11,7 @@ data class Lancamento(
     val mes: String,
     val ano: String
 )
+
 data class HistoryResponse(
     val userName: String,
     val userId: Int,
